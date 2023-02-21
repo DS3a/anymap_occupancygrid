@@ -15,7 +15,9 @@
 #define POINT_TYPE pcl::PointXYZ
 
 namespace anymap {
+	// Layers can be added to this with ease with the help of observation_sources.hpp, and all can be concatenated too
 
+    // This function can be used to get a preliminary anymap instance
     grid_map::GridMap init_anymap() {
         // initialize with empty layers
         grid_map::GridMap anymap = grid_map::GridMap();
@@ -26,19 +28,21 @@ namespace anymap {
         return anymap;
     }
 
+    // This function converts the anymap instance to an occupancy grid
     bool as_occupancy_grid(std::shared_ptr<grid_map::GridMap> anymap, std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
 
         if (anymap->exists("aggregate")) {
             grid_map::GridMapRosConverter conv;
             conv.toOccupancyGrid(*anymap.get(), "aggregate", 0, 1, *grid_msg.get());
+            return true;
         }
-        return true;
+	return false;
     }
 
 
 // tests
     void add_test_layer(std::shared_ptr<grid_map::GridMap> anymap) {
-        anymap->add("test");
+        anymap->add("test", 0);
     }
 
     void test_as_occupancy_grid(std::shared_ptr<grid_map::GridMap> anymap, std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
