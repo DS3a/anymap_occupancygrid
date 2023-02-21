@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "anymap.hpp"
+#include "observation_source.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -13,7 +14,6 @@
 #include "pcl/point_cloud.h"
 #include "pcl/common/transforms.h"
 
-#define POINT_TYPE pcl::PointXYZ
 
 class AnyMapNode : public rclcpp::Node
 {
@@ -32,11 +32,39 @@ public:
 
         spatial_obstacle_filter.setInputCloud(cloud);
         spatial_obstacle_filter.setCondition(z_obstacle_cond);
+
+
+        this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
+
+        std::cout << "Initializing anymap\n";
+        this->anymap_ptr = std::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
+        *anymap_ptr.get() = anymap::init_anymap();
+
+        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(new observation_source::ObservationSource(this->get_logger()));
+
+        // testing
+
+        std::cout << "initialized anymap, adding test layer\n";
+        anymap::add_test_layer(this->anymap_ptr);
+        std::cout << "added test layer, converting to rosmsg\n";
+        anymap::test_as_occupancy_grid(this->anymap_ptr, this->grid_msg_ptr);
+
+        std::cout << this->anymap_ptr->exists("test") << std::endl;
+        std::cout << "The resolution is : " << this->grid_msg_ptr->info.resolution << std::endl;
+        std::cout << "The height and width are : " << this->grid_msg_ptr->info.height << " " << this->grid_msg_ptr->info.width << std::endl;
+
+        this->test_source_ptr->add_default_parameters();
+
     }
 
 private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_subscription;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_publisher;
+
+    std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr;
+    std::shared_ptr<grid_map::GridMap> anymap_ptr;
+
+    std::shared_ptr<observation_source::ObservationSource> test_source_ptr;
 
     pcl::PointCloud<POINT_TYPE>::Ptr cloud = std::make_shared<pcl::PointCloud<POINT_TYPE>>();
 
@@ -61,24 +89,23 @@ int main(int argc, char **argv)
     (void) argc;
     (void) argv;
 
+    /*
+    std::shared_ptr<int> test_shared_ptr(new int);
+    *test_shared_ptr.get() = 1;
+
+    anymap::print_test_int();
+    anymap::update_test_int(test_shared_ptr);
+    anymap::print_test_int();
+
+    *test_shared_ptr.get() = 23;
+    anymap::print_test_int();
+
+    NOTE shared_ptrs work the way Arc::Mutex works in rust
+    */
     rclcpp::init(argc, argv);
     auto anymap_node = std::make_shared<AnyMapNode>();
     rclcpp::spin(anymap_node);
 
-
-    std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr(new nav_msgs::msg::OccupancyGrid);
-
-    std::cout << "Initializing anymap\n";
-    std::shared_ptr<grid_map::GridMap> anymap_ptr(new grid_map::GridMap);
-    *anymap_ptr.get() = anymap::init_anymap();
-    std::cout << "initialized anymap, adding test layer\n";
-    anymap::add_test_layer(anymap_ptr);
-    std::cout << "added test layer, converting to rosmsg\n";
-    // anymap::test_as_occupancy_grid(anymap_ptr, grid_msg_ptr);
-
-    std::cout << anymap_ptr->exists("test") << std::endl;
-    std::cout << "The resolution is : " << grid_msg_ptr->info.resolution << std::endl;
-    std::cout << "The height and width are : " << grid_msg_ptr->info.height << " " << grid_msg_ptr->info.width << std::endl;
 
     return 0;
 }
