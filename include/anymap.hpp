@@ -22,7 +22,7 @@ namespace anymap {
         // initialize with empty layers
         grid_map::GridMap anymap = grid_map::GridMap();
 
-        anymap.setGeometry(grid_map::Length(6, 6), 0.01875);
+        anymap.setGeometry(grid_map::Length(8, 8), 0.025);
         // it's a 320x320 grid
 
         return anymap;

@@ -29,8 +29,12 @@ public:
         pcl::ConditionAnd<POINT_TYPE>::Ptr range_cond (new pcl::ConditionAnd<POINT_TYPE>());
         z_obstacle_cond = range_cond;
         // just use the real realsense xD
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 3.27)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 1.27)));
         z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, 0.0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, 0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 3.0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -3.0)));
 
         spatial_obstacle_filter.setInputCloud(cloud);
         spatial_obstacle_filter.setCondition(z_obstacle_cond);
@@ -42,9 +46,10 @@ public:
         this->anymap_ptr = std::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
         *anymap_ptr.get() = anymap::init_anymap();
 
-        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(new observation_source::ObservationSource(this->get_logger()));
 
         // testing
+        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
+            new observation_source::ObservationSource("pcl", this->anymap_ptr));
 
         anymap_publisher = this->create_publisher<nav_msgs::msg::OccupancyGrid>("anymap", 10);
 
@@ -56,8 +61,6 @@ public:
         std::cout << this->anymap_ptr->exists("test") << std::endl;
         std::cout << "The resolution is : " << this->grid_msg_ptr->info.resolution << std::endl;
         std::cout << "The height and width are : " << this->grid_msg_ptr->info.height << " " << this->grid_msg_ptr->info.width << std::endl;
-
-        this->test_source_ptr->add_default_parameters();
 
         timer_ = this->create_wall_timer(
             500ms, std::bind(&AnyMapNode::timer_callback, this));
@@ -87,19 +90,18 @@ private:
     int counter = 0;
 
     void pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+
         sensor_msgs::msg::PointCloud2 obstacles_msg;
         pcl::fromROSMsg(*msg, *this->cloud);
-        spatial_obstacle_filter.setInputCloud(this->cloud);
-        spatial_obstacle_filter.filter(*this->cloud);
+
         Eigen::Affine3f transform_y = Eigen::Affine3f::Identity();
-        Eigen::Affine3f transform_x = Eigen::Affine3f::Identity();
-        transform_y.rotate(Eigen::AngleAxisf(3.1415, Eigen::Vector3f::UnitY()));
-        // transform_x.rotate(Eigen::AngleAxisf(1.57075, Eigen::Vector3f::UnitX()));
+        transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitX()));
+        transform_y.rotate(Eigen::AngleAxisf(3.14159/2.0, Eigen::Vector3f::UnitY()));
         pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<POINT_TYPE>());
         pcl::transformPointCloud(*cloud, *transformed_cloud, transform_y);
 
-        // pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud_x (new pcl::PointCloud<POINT_TYPE>());
-        // pcl::transformPointCloud(*transformed_cloud, *transformed_cloud_x, transform_x);
+        spatial_obstacle_filter.setInputCloud(transformed_cloud);
+        spatial_obstacle_filter.filter(*transformed_cloud);
 
         pcl::toROSMsg(*cloud, obstacles_msg);
         this->pcl_publisher->publish(obstacles_msg);
@@ -107,14 +109,13 @@ private:
         cloud = transformed_cloud;
 
         this->counter++;
-        if (counter == 15) {
+        if (counter == 7) {
+            this->test_source_ptr->clear_layer();
             counter = 0;
-            this->test_source_ptr->set_input_cloud(cloud);
-            this->test_source_ptr->initialize_grid_map_geometry();
-            this->test_source_ptr->add_layer_from_input_cloud("pcl");
-
-            this->anymap_ptr = std::make_shared<grid_map::GridMap>(this->test_source_ptr->get_grid_map());
+            this->test_source_ptr->set_input_cloud(transformed_cloud);
+            this->test_source_ptr->update_layer();
         }
+
     }
 
     void timer_callback() {
@@ -124,6 +125,8 @@ private:
           conv.toOccupancyGrid(*this->anymap_ptr.get(), "pcl", 0, 1, *this->grid_msg_ptr.get());
           grid_msg_ptr->header.frame_id = "camera_link";
           this->anymap_publisher->publish(*this->grid_msg_ptr.get());
+        } else {
+            std::cout << "pcl layer not found\n";
         }
     }
 };
