@@ -31,7 +31,7 @@ namespace anymap {
     static std::vector<observation_source::ObservationSource> observation_sources;
 
     // This function converts the anymap instance to an occupancy grid
-    bool as_occupancy_grid(std::shared_ptr<grid_map::GridMap> anymap, std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
+    bool as_occupancy_grid(boost::shared_ptr<grid_map::GridMap> anymap, boost::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
 
         if (anymap->exists("aggregate")) {
             grid_map::GridMapRosConverter conv;
@@ -43,11 +43,11 @@ namespace anymap {
 
 
 // tests
-    void add_test_layer(std::shared_ptr<grid_map::GridMap> anymap) {
+    void add_test_layer(boost::shared_ptr<grid_map::GridMap> anymap) {
         anymap->add("test", 0);
     }
 
-    void test_as_occupancy_grid(std::shared_ptr<grid_map::GridMap> anymap, std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
+    void test_as_occupancy_grid(boost::shared_ptr<grid_map::GridMap> anymap, boost::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
         grid_map::GridMapRosConverter conv;
 
         conv.toOccupancyGrid(*anymap.get(), "test", 0, 1, *grid_msg.get());
@@ -55,9 +55,9 @@ namespace anymap {
 
     void add_pcl_to_occupancy_grid();
 
-    std::shared_ptr<int> test_int(new int(3));
+    boost::shared_ptr<int> test_int(new int(3));
 
-    void update_test_int(std::shared_ptr<int> test_int_) {
+    void update_test_int(boost::shared_ptr<int> test_int_) {
         test_int = test_int_;
     }
 

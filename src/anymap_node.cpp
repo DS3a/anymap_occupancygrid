@@ -40,15 +40,15 @@ public:
         spatial_obstacle_filter.setCondition(z_obstacle_cond);
 
 
-        this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
+        this->grid_msg_ptr = boost::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
 
         std::cout << "Initializing anymap\n";
-        this->anymap_ptr = std::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
+        this->anymap_ptr = boost::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
         *anymap_ptr.get() = anymap::init_anymap();
 
 
         // testing
-        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
+        this->test_source_ptr = boost::shared_ptr<observation_source::ObservationSource>(
             new observation_source::ObservationSource("pcl", this->anymap_ptr));
 
         anymap_publisher = this->create_publisher<nav_msgs::msg::OccupancyGrid>("anymap", 10);
@@ -74,12 +74,12 @@ private:
 
     rclcpp::TimerBase::SharedPtr timer_;
 
-    std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr;
-    std::shared_ptr<grid_map::GridMap> anymap_ptr;
+    boost::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr;
+    boost::shared_ptr<grid_map::GridMap> anymap_ptr;
 
-    std::shared_ptr<grid_map::GridMap> test_grid_map;
+    boost::shared_ptr<grid_map::GridMap> test_grid_map;
 
-    std::shared_ptr<observation_source::ObservationSource> test_source_ptr;
+    boost::shared_ptr<observation_source::ObservationSource> test_source_ptr;
 
     pcl::PointCloud<POINT_TYPE>::Ptr cloud = std::make_shared<pcl::PointCloud<POINT_TYPE>>();
 
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     (void) argv;
 
     /*
-    std::shared_ptr<int> test_shared_ptr(new int);
+    boost::shared_ptr<int> test_shared_ptr(new int);
     *test_shared_ptr.get() = 1;
 
     anymap::print_test_int();

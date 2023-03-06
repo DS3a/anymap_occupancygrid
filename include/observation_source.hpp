@@ -12,7 +12,7 @@
 namespace observation_source {
     class ObservationSource {
     public:
-        ObservationSource(std::string layer_, std::shared_ptr<grid_map::GridMap> _anymap_ptr, double resolution_=0.01875) {
+        ObservationSource(std::string layer_, boost::shared_ptr<grid_map::GridMap> _anymap_ptr, double resolution_=0.01875) {
             this->cloud = std::make_shared<pcl::PointCloud<POINT_TYPE>>();
             this->layer = layer_;
             this->anymap_ptr_ = _anymap_ptr;
@@ -20,7 +20,7 @@ namespace observation_source {
             this->resolution = resolution_;
         }
 
-        void set_input_cloud(std::shared_ptr<pcl::PointCloud<POINT_TYPE>> input_cloud) {
+        void set_input_cloud(boost::shared_ptr<pcl::PointCloud<POINT_TYPE>> input_cloud) {
             this->cloud = input_cloud;
         }
 
@@ -56,7 +56,7 @@ namespace observation_source {
         double resolution;
         pcl::PointCloud<POINT_TYPE>::Ptr cloud;
         std::string layer;
-        std::shared_ptr<grid_map::GridMap> anymap_ptr_;
+        boost::shared_ptr<grid_map::GridMap> anymap_ptr_;
     };
 
 
