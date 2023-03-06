@@ -81,7 +81,7 @@ private:
 
     boost::shared_ptr<observation_source::ObservationSource> test_source_ptr;
 
-    pcl::PointCloud<POINT_TYPE>::Ptr cloud = std::make_shared<pcl::PointCloud<POINT_TYPE>>();
+    pcl::PointCloud<POINT_TYPE>::Ptr cloud = boost::make_shared<pcl::PointCloud<POINT_TYPE>>();
 
     pcl::ConditionAnd<POINT_TYPE>::Ptr z_obstacle_cond;
     pcl::ConditionalRemoval<POINT_TYPE> spatial_obstacle_filter = pcl::ConditionalRemoval<POINT_TYPE>();
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     NOTE shared_ptrs work the way Arc::Mutex works in rust
     */
     rclcpp::init(argc, argv);
-    auto anymap_node = std::make_shared<AnyMapNode>();
+    auto anymap_node = boost::make_shared<AnyMapNode>();
     rclcpp::spin(anymap_node);
 
 
