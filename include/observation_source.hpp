@@ -6,6 +6,7 @@
 #include "grid_map_pcl/grid_map_pcl.hpp"
 #include "pcl/point_cloud.h"
 
+#define POINT_TYPE pcl::PointXYZ
 
 // This needs work, the converts the pointcloud data into a grid which can be appended to the anymap instance
 namespace observation_source {
@@ -24,19 +25,26 @@ namespace observation_source {
         }
 
         void update_layer() {
-            for (auto &point: *(this->cloud)) {
-                int x_position = point.x / this->resolution;
-                int y_position = point.y / this->resolution;
-                std::cout << "(" << x_position << ", " << y_position << "), ";
-                grid_map::Position pose(point.x, point.y);
-                try {
-                    this->anymap_ptr_->atPosition(this->layer, pose) += 1.0;
-                } catch (std::out_of_range e) {
-                    std::cout << "out of range, work on filtering please\n";
-                    continue;
+
+            if (this->update_available) {
+                for (auto &point: *(this->cloud)) {
+                    int x_position = point.x / this->resolution;
+                    int y_position = point.y / this->resolution;
+                    std::cout << "(" << x_position << ", " << y_position << "), ";
+                    grid_map::Position pose(point.x, point.y);
+                    try {
+                        this->anymap_ptr_->atPosition(this->layer, pose) += 1.0;
+                        // TODO optimization, avoid this try catch thingi
+                    } catch (std::out_of_range e) {
+                        std::cout << "out of range, work on filtering please\n";
+                        continue;
+                    }
                 }
+            } else {
+                std::cout << "the pointcloud has not been updated";
             }
-            std::cout << std::endl;
+
+            this->update_available = false;
         }
 
         void clear_layer() {
@@ -44,6 +52,7 @@ namespace observation_source {
         }
 
     private:
+        bool update_available;
         double resolution;
         pcl::PointCloud<POINT_TYPE>::Ptr cloud;
         std::string layer;

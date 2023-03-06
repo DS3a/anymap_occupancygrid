@@ -7,12 +7,12 @@
 #include "grid_map_ros/grid_map_ros.hpp"
 #include "grid_map_pcl/grid_map_pcl.hpp"
 
+#include "observation_source.hpp"
 
 #include "nav_msgs/msg/occupancy_grid.hpp"
 
 #include "pcl/point_cloud.h"
 
-#define POINT_TYPE pcl::PointXYZ
 
 namespace anymap {
 	// Layers can be added to this with ease with the help of observation_sources.hpp, and all can be concatenated too
@@ -27,6 +27,8 @@ namespace anymap {
 
         return anymap;
     }
+
+    static std::vector<observation_source::ObservationSource> observation_sources;
 
     // This function converts the anymap instance to an occupancy grid
     bool as_occupancy_grid(std::shared_ptr<grid_map::GridMap> anymap, std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
