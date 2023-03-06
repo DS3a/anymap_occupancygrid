@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     NOTE shared_ptrs work the way Arc::Mutex works in rust
     */
     rclcpp::init(argc, argv);
-    auto anymap_node = boost::make_shared<AnyMapNode>();
+    auto anymap_node = std::make_shared<AnyMapNode>();
     rclcpp::spin(anymap_node);
 
 
