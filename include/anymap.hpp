@@ -30,6 +30,10 @@ namespace anymap {
 
     static std::vector<observation_source::ObservationSource> observation_sources;
 
+    bool update_anymap() {
+        // TODO update all layers and add them into the aggregate layer
+    }
+
     // This function converts the anymap instance to an occupancy grid
     bool as_occupancy_grid(boost::shared_ptr<grid_map::GridMap> anymap, boost::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg) {
 

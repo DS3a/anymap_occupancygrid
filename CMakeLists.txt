@@ -25,6 +25,7 @@ find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(anymap_interfaces REQUIRED)
 
 
 
@@ -59,6 +60,7 @@ ament_target_dependencies(anymap_node
   "PCL"
   "pcl_ros"
   "pcl_conversions"
+  "anymap_interfaces"
 )
 ### NOTE
 
