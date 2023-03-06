@@ -13,7 +13,7 @@ namespace observation_source {
     class ObservationSource {
     public:
         ObservationSource(std::string layer_, boost::shared_ptr<grid_map::GridMap> _anymap_ptr, double resolution_=0.01875) {
-            this->cloud = std::make_shared<pcl::PointCloud<POINT_TYPE>>();
+            this->cloud = boost::make_shared<pcl::PointCloud<POINT_TYPE>>();
             this->layer = layer_;
             this->anymap_ptr_ = _anymap_ptr;
             this->anymap_ptr_->add(this->layer, 0.0);
