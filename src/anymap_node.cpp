@@ -21,6 +21,8 @@
 
 using namespace std::chrono_literals;
 
+static grid_map::GridMapRosConverter conv;
+
 class AnyMapNode : public rclcpp::Node
 {
 public:
@@ -28,7 +30,7 @@ public:
 private:
     // pcl source 1
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_subscription;
-    boost::shared_ptr<observation_source::ObservationSource> test_source_ptr;
+    std::shared_ptr<observation_source::ObservationSource> test_source_ptr;
     pcl::PointCloud<POINT_TYPE>::Ptr cloud = boost::make_shared<pcl::PointCloud<POINT_TYPE>>();
     pcl::ConditionAnd<POINT_TYPE>::Ptr z_obstacle_cond;
     pcl::ConditionalRemoval<POINT_TYPE> spatial_obstacle_filter = pcl::ConditionalRemoval<POINT_TYPE>();
@@ -46,8 +48,8 @@ private:
 
     rclcpp::TimerBase::SharedPtr timer_;
 
-    boost::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr;
-    boost::shared_ptr<grid_map::GridMap> anymap_ptr;
+    std::shared_ptr<nav_msgs::msg::OccupancyGrid> grid_msg_ptr;
+    std::shared_ptr<grid_map::GridMap> anymap_ptr;
 
 
     int counter = 0;
@@ -59,7 +61,7 @@ private:
 AnyMapNode::AnyMapNode() : Node("anymap_node") {
     // initialize the anymap instance, to which layers will be added
     std::cout << "Initializing anymap\n";
-    this->anymap_ptr = boost::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
+    this->anymap_ptr = std::shared_ptr<grid_map::GridMap>(new grid_map::GridMap);
     *anymap_ptr.get() = anymap::init_anymap();
 
     // the anymap publisher
@@ -75,7 +77,7 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
         ); // this is for the realsense, which will not be used
 
         // the observation source that the above subscription will feed into
-        this->test_source_ptr = boost::shared_ptr<observation_source::ObservationSource>(
+        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
             new observation_source::ObservationSource("pcl", this->anymap_ptr));
 
 
@@ -95,7 +97,7 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
         spatial_obstacle_filter.setCondition(z_obstacle_cond);
 
 
-        this->grid_msg_ptr = boost::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
+        this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
 
         // TODO replace this with an action server that updates the map everytime it is called
         timer_ = this->create_wall_timer(
@@ -139,10 +141,9 @@ void AnyMapNode::update_anymap_callback(const std::shared_ptr<anymap_interfaces:
 }
 
 void AnyMapNode::timer_callback() {
-    grid_map::GridMapRosConverter conv;
     if (this->anymap_ptr->exists("pcl")) {
         std::cout << "found pcl layer publishing gridmap \n";
-        conv.toOccupancyGrid(*this->anymap_ptr.get(), "pcl", 0, 1, *this->grid_msg_ptr.get());
+        conv.toOccupancyGrid(*this->anymap_ptr.get(), "pcl", 0, 50, *this->grid_msg_ptr.get());
         grid_msg_ptr->header.frame_id = "camera_link";
         this->anymap_publisher->publish(*this->grid_msg_ptr.get());
     } else {
