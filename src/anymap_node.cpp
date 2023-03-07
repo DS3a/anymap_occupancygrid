@@ -1,8 +1,19 @@
+/* TODO
+ * - add all observation sources
+ * - set the update flag when the pcl callback is called
+ * - update the layer when the update flag is set to true
+ * - post process the layer when all points are added to it
+ * - aggregate all layers when the update costmap service is called
+ * - sort the TF tree stuff, i.e. copy the current tf between base_link and odom,
+ *        and publish that till the next time the map is updated
+ */
+
 #include <cstdio>
 #include <iostream>
 
 #include "anymap.hpp"
 #include "observation_source.hpp"
+#include "pcl_preprocessor.hpp"
 
 #include "anymap_interfaces/srv/trigger_update.hpp"
 
@@ -124,9 +135,11 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
 
     cloud = transformed_cloud;
 
+    // TODO test and see whether this works well in realtime
     this->counter++;
     if (counter == 7) {
         this->test_source_ptr->clear_layer();
+        this->test_source_ptr->set_update_flag();
         counter = 0;
         this->test_source_ptr->set_input_cloud(transformed_cloud);
         this->test_source_ptr->update_layer();
@@ -143,7 +156,7 @@ void AnyMapNode::update_anymap_callback(const std::shared_ptr<anymap_interfaces:
 void AnyMapNode::timer_callback() {
     if (this->anymap_ptr->exists("pcl")) {
         std::cout << "found pcl layer publishing gridmap \n";
-        conv.toOccupancyGrid(*this->anymap_ptr.get(), "pcl", 0, 50, *this->grid_msg_ptr.get());
+        conv.toOccupancyGrid(*this->anymap_ptr.get(), "pcl", 0, 1, *this->grid_msg_ptr.get());
         grid_msg_ptr->header.frame_id = "camera_link";
         this->anymap_publisher->publish(*this->grid_msg_ptr.get());
     } else {
