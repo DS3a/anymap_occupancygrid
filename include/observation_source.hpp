@@ -29,7 +29,6 @@ namespace observation_source {
         }
 
         void update_layer() {
-
             if (this->update_available) {
                 for (auto &point: *(this->cloud)) {
                     int x_position = point.x / this->resolution;

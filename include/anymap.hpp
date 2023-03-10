@@ -30,6 +30,11 @@ namespace anymap {
 
     static std::vector<std::shared_ptr<observation_source::ObservationSource>> observation_sources;
 
+    // TODO add a layer to the anymap instance
+    bool add_layer(std::shared_ptr<grid_map::GridMap> anymap_ptr, std::string layer) {
+
+    }
+
     bool update_anymap() {
         // TODO update all layers and add them into the aggregate layer
     }

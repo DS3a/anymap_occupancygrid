@@ -97,12 +97,12 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
 
         pcl::ConditionAnd<POINT_TYPE>::Ptr range_cond (new pcl::ConditionAnd<POINT_TYPE>());
         z_obstacle_cond = range_cond;
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 1.27)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, 0.0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 0.80)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, -0.3)));
         z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, 0)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 3.0)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -3.0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, -4)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 4.0)));
+        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -4.0)));
 
         spatial_obstacle_filter.setInputCloud(cloud);
         spatial_obstacle_filter.setCondition(z_obstacle_cond);
@@ -112,7 +112,7 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
 
         // TODO replace this with an action server that updates the map everytime it is called
         timer_ = this->create_wall_timer(
-            500ms, std::bind(&AnyMapNode::timer_callback, this));
+            100ms, std::bind(&AnyMapNode::timer_callback, this));
 
     }
 
@@ -122,22 +122,28 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
     pcl::fromROSMsg(*msg, *this->cloud);
 
     Eigen::Affine3f transform_y = Eigen::Affine3f::Identity();
+    /*
     transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitX()));
     transform_y.rotate(Eigen::AngleAxisf(3.14159/2.0, Eigen::Vector3f::UnitY()));
+*/
+    transform_y.rotate(Eigen::AngleAxisf(3.14159/2.0, Eigen::Vector3f::UnitY()));
+    transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitZ()));
+    // NOTE camera +z became map +x, camera +x became map -y
+    transform_y.translate(Eigen::Vector3f(2, 0, -5));
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<POINT_TYPE>());
     pcl::transformPointCloud(*cloud, *transformed_cloud, transform_y);
 
     spatial_obstacle_filter.setInputCloud(transformed_cloud);
     spatial_obstacle_filter.filter(*transformed_cloud);
 
-    pcl::toROSMsg(*cloud, obstacles_msg);
+    pcl::toROSMsg(*transformed_cloud, obstacles_msg);
     this->pcl_publisher->publish(obstacles_msg);
 
     cloud = transformed_cloud;
 
-    // TODO test and see whether this works well in realtime
+    // TODO test and see whetHer this works well in realtime
     this->counter++;
-    if (counter == 7) {
+    if (counter == 2) {
         this->test_source_ptr->clear_layer();
         this->test_source_ptr->set_update_flag();
         counter = 0;
