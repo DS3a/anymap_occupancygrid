@@ -18,6 +18,7 @@ namespace observation_source {
             this->anymap_ptr_ = _anymap_ptr;
             this->anymap_ptr_->add(this->layer, 0.0);
             this->resolution = resolution_;
+            this->point_weight = 0.8;
         }
 
         void set_input_cloud(boost::shared_ptr<pcl::PointCloud<POINT_TYPE>> input_cloud) {
@@ -28,26 +29,29 @@ namespace observation_source {
             this->update_available = true;
         }
 
+        void set_point_weight(float point_weight_) {
+            this->point_weight = point_weight_;
+        }
+
         void update_layer() {
             if (this->update_available) {
                 for (auto &point: *(this->cloud)) {
                     int x_position = point.x / this->resolution;
                     int y_position = point.y / this->resolution;
-                    std::cout << "(" << x_position << ", " << y_position << "), ";
+                    // std::cout << "(" << x_position << ", " << y_position << "), ";
                     grid_map::Position pose(point.x, point.y);
                     try {
-                        this->anymap_ptr_->atPosition(this->layer, pose) += 1.0;
+                        this->anymap_ptr_->atPosition(this->layer, pose) += this->point_weight;
                         // TODO optimization, avoid this try catch thingi
                     } catch (std::out_of_range e) {
-                        std::cout << "out of range, work on filtering please\n";
+                        // std::cout << "point out of range, useless fellow. work on filtering\n";
                         continue;
                     }
+                    this->update_available = false;
                 }
             } else {
                 std::cout << "the pointcloud has not been updated";
             }
-
-            this->update_available = false;
         }
 
         void clear_layer() {
@@ -57,6 +61,7 @@ namespace observation_source {
     private:
         bool update_available;
         double resolution;
+        float point_weight;
         pcl::PointCloud<POINT_TYPE>::Ptr cloud;
         std::string layer;
         std::shared_ptr<grid_map::GridMap> anymap_ptr_;
