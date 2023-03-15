@@ -32,6 +32,7 @@
 
 //testing
 #include "layer_postprocessor.hpp"
+#include <pcl/filters/voxel_grid.h>
 
 
 using namespace std::chrono_literals;
@@ -128,6 +129,15 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
     sensor_msgs::msg::PointCloud2 obstacles_msg;
     pcl::fromROSMsg(*msg, *this->cloud);
 
+    // std::cout << "Initial size : " << this->cloud->points.size() << std::endl;
+    pcl::PointCloud<POINT_TYPE>::Ptr cloud_filtered (new pcl::PointCloud<POINT_TYPE>());
+    pcl::VoxelGrid<POINT_TYPE> sor;
+    sor.setInputCloud (cloud);
+    sor.setLeafSize (0.05f, 0.05f, 0.05f);
+    sor.filter (*cloud_filtered);
+
+    // std::cout << "Downsampled size : " << cloud_filtered->points.size() << std::endl;
+
     Eigen::Affine3f transform_y = Eigen::Affine3f::Identity();
     /*
     transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitX()));
@@ -138,10 +148,11 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
     // NOTE camera +z became map +x, camera +x became map -y
     // transform_y.translate(Eigen::Vector3f(2, 0, -5));
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<POINT_TYPE>());
-    pcl::transformPointCloud(*cloud, *transformed_cloud, transform_y);
+    pcl::transformPointCloud(*cloud_filtered, *transformed_cloud, transform_y);
 
     spatial_obstacle_filter.setInputCloud(transformed_cloud);
     spatial_obstacle_filter.filter(*transformed_cloud);
+
 
     pcl::toROSMsg(*transformed_cloud, obstacles_msg);
     this->pcl_publisher->publish(obstacles_msg);
@@ -170,12 +181,12 @@ void AnyMapNode::update_anymap_callback(const std::shared_ptr<anymap_interfaces:
 
 void AnyMapNode::timer_callback() {
     if (this->anymap_ptr->exists("pclProcessed")) {
-        std::cout << "found pcl layer publishing gridmap \n";
+        // std::cout << "found pcl layer publishing gridmap \n";
         conv.toOccupancyGrid(*this->anymap_ptr.get(), "pclProcessed", 0, 1, *this->grid_msg_ptr.get());
         grid_msg_ptr->header.frame_id = "camera_link";
         this->anymap_publisher->publish(*this->grid_msg_ptr.get());
     } else {
-        std::cout << "pcl layer not found\n";
+        // std::cout << "pcl layer not found\n";
     }
 }
 

@@ -41,7 +41,7 @@ namespace layer_postprocessor {
 
         const int encoding = 5;
         this->cv_converter.toImage<float, 1>((grid_map::GridMap&)*temp_grid, (const std::string&)this->layer_name,
-                                   encoding ,this->image);
+                                   encoding, 0, 1, this->image);
     }
 
     void LayerPostProcessor::back_to_grid() {
@@ -64,7 +64,7 @@ namespace layer_postprocessor {
                   cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
         this->image = image_eroded_with_3x3_kernel;*/
         cv::dilate(this->image, image_eroded_with_3x3_kernel,
-                  cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
+                  cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(5, 5)));
         this->image = image_eroded_with_3x3_kernel;
 
 
