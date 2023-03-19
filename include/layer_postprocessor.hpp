@@ -64,7 +64,7 @@ namespace layer_postprocessor {
                   cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
         this->image = image_eroded_with_3x3_kernel;*/
         cv::dilate(this->image, image_eroded_with_3x3_kernel,
-                  cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(5, 5)));
+                  cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15)));
         this->image = image_eroded_with_3x3_kernel;
 
 

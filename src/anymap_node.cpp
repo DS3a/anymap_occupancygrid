@@ -33,7 +33,7 @@
 //testing
 #include "layer_postprocessor.hpp"
 #include <pcl/filters/voxel_grid.h>
-
+#include "pratham_observation_sources.hpp"
 
 using namespace std::chrono_literals;
 
@@ -94,35 +94,33 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
         ); // this is for the realsense, which will not be used
 
         // the observation source that the above subscription will feed into
-        this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
-            new observation_source::ObservationSource("pcl", this->anymap_ptr));
-        this->test_postprocessor.set_layer_name("pcl");
-        this->test_postprocessor.set_input_grid(this->anymap_ptr);
+    this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
+        new observation_source::ObservationSource("pcl", this->anymap_ptr));
+    this->test_postprocessor.set_layer_name("pcl");
+    this->test_postprocessor.set_input_grid(this->anymap_ptr);
 
 
-        // this is a test
-        pcl_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
+    // this is a test
+    pcl_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
 
-        pcl::ConditionAnd<POINT_TYPE>::Ptr range_cond (new pcl::ConditionAnd<POINT_TYPE>());
-        z_obstacle_cond = range_cond;
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 0.80)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, -0.3)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, -4)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 4.0)));
-        z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -4.0)));
+    pcl::ConditionAnd<POINT_TYPE>::Ptr range_cond (new pcl::ConditionAnd<POINT_TYPE>());
+    z_obstacle_cond = range_cond;
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 0.80)));
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, -0.3)));
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, -4)));
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 4.0)));
+    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -4.0)));
 
-        spatial_obstacle_filter.setInputCloud(cloud);
-        spatial_obstacle_filter.setCondition(z_obstacle_cond);
+    spatial_obstacle_filter.setInputCloud(cloud);
+    spatial_obstacle_filter.setCondition(z_obstacle_cond);
 
 
-        this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
+    this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
 
-        // TODO replace this with an action server that updates the map everytime it is called
-        timer_ = this->create_wall_timer(
-            150ms, std::bind(&AnyMapNode::timer_callback, this));
-
-    }
+    // TODO replace this with an action server that updates the map everytime it is called
+    timer_ = this->create_wall_timer(150ms, std::bind(&AnyMapNode::timer_callback, this));
+}
 
 void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
 
@@ -133,16 +131,19 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
     pcl::PointCloud<POINT_TYPE>::Ptr cloud_filtered (new pcl::PointCloud<POINT_TYPE>());
     pcl::VoxelGrid<POINT_TYPE> sor;
     sor.setInputCloud (cloud);
-    sor.setLeafSize (0.05f, 0.05f, 0.05f);
+    sor.setLeafSize (0.13f, 0.13f, 0.13f);
     sor.filter (*cloud_filtered);
-
+    this->test_source_ptr->set_point_weight(0.6);
+    // cloud_filtered = this->cloud;
     // std::cout << "Downsampled size : " << cloud_filtered->points.size() << std::endl;
 
     Eigen::Affine3f transform_y = Eigen::Affine3f::Identity();
+
     /*
     transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitX()));
     transform_y.rotate(Eigen::AngleAxisf(3.14159/2.0, Eigen::Vector3f::UnitY()));
-*/
+    */
+
     transform_y.rotate(Eigen::AngleAxisf(3.14159/2.0, Eigen::Vector3f::UnitY()));
     transform_y.rotate(Eigen::AngleAxisf(-3.14159/2.0, Eigen::Vector3f::UnitZ()));
     // NOTE camera +z became map +x, camera +x became map -y

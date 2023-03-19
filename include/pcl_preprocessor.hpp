@@ -4,6 +4,7 @@
 #include "pcl/point_cloud.h"
 #include "pcl/common/transforms.h"
 #include "pcl/filters/conditional_removal.h"
+#include "pcl/filters/voxel_grid.h"
 
 namespace pcl_preprocessor {
     class PclPreProcessor {
@@ -14,6 +15,10 @@ namespace pcl_preprocessor {
         // DONE
         // preprocesses the input_cloud
         bool preprocess_cloud();
+
+
+        // TODO
+        void set_leaf_size(double leaf_size_);
 
         // DONE
         // set the transformation that the pointcloud has to go through
@@ -40,6 +45,7 @@ namespace pcl_preprocessor {
 
         bool cloud_given;
 
+        bool transform_first;
         bool transform_cloud;
         Eigen::Affine3f transformation;
 
@@ -47,13 +53,16 @@ namespace pcl_preprocessor {
         // transform the cloud
         bool apply_transformation();
 
-        bool transform_first;
+        bool downsample;
+        double leaf_size;
+        pcl::VoxelGrid<POINT_TYPE> downsampling_filter;
+        bool apply_downsampling_cloud();
 
-        bool box3d_filter;
 
         // DONE
         // filter the cloud with boxes
         bool apply_box3d_filter();
+        bool box3d_filter;
         double min_x;
         double min_y;
         double min_z;
@@ -67,6 +76,7 @@ namespace pcl_preprocessor {
     };
 
     PclPreProcessor::PclPreProcessor() {
+        this->downsample = false;
         this->transform_cloud = false;
         this->box3d_filter = false;
         this->transform_first = true;
@@ -85,6 +95,7 @@ namespace pcl_preprocessor {
         }
     }
 
+
     bool PclPreProcessor::apply_box3d_filter() {
         if (this->box3d_filter) {
             this->box3d_filter_handler.filter(*(this->cloud));
@@ -95,8 +106,23 @@ namespace pcl_preprocessor {
         }
     }
 
+    bool PclPreProcessor::apply_downsampling_cloud() {
+        if (this->downsample) {
+            pcl::PointCloud<POINT_TYPE>::Ptr downsampled_cloud (new pcl::PointCloud<POINT_TYPE>());
+            this->downsampling_filter.setInputCloud(this->cloud);
+            this->downsampling_filter.filter(*downsampled_cloud);
+            this->cloud = downsampled_cloud;
+
+            return true;
+        }
+
+        return false;
+    }
+
     bool PclPreProcessor::preprocess_cloud() {
         if (this->cloud_given) {
+            // applies downsampling if downsampling is set to true
+            this->apply_downsampling_cloud();
             if (this->transform_first) {
                 this->apply_transformation();
                 this->apply_box3d_filter();
@@ -117,6 +143,13 @@ namespace pcl_preprocessor {
 
     void PclPreProcessor::set_transform_first(bool transform_first_) {
         this->transform_first = transform_first_;
+    }
+
+    void PclPreProcessor::set_leaf_size(double leaf_size_) {
+        this->downsample = true;
+        this->leaf_size = leaf_size_;
+        this->downsampling_filter.setInputCloud(this->cloud);
+        this->downsampling_filter.setLeafSize(this->leaf_size, this->leaf_size, this->leaf_size);
     }
 
     void PclPreProcessor::set_transform(Eigen::Affine3f transformation_) {
