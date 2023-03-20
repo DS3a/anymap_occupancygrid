@@ -133,6 +133,11 @@ namespace pratham_observation_sources {
         potholes_src.postprocessor.process_layer();
     }
 
+
+    // TODO aggregate all layers and add them to the "aggregate" layer in pcl
+    void update_pratham_anymap() {
+
+    }
 }
 
 #endif // PRATHAM_OBSERVATION_SOURCES_H_
