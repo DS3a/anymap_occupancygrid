@@ -156,6 +156,7 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
 
 
     pcl::toROSMsg(*transformed_cloud, obstacles_msg);
+    obstacles_msg.header.frame_id = "camera_link";
     this->pcl_publisher->publish(obstacles_msg);
 
     cloud = transformed_cloud;
