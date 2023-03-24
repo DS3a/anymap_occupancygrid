@@ -123,13 +123,22 @@ namespace pratham_observation_sources {
 
 
     void update_potholes_layer() {
+
+        std::cout << "beginning preprocessing \n";
+        // potholes_src.preprocessor.set_input_cloud(potholes_src.source_cloud);
         potholes_src.preprocessor.preprocess_cloud();
 
+        std::cout << "updating the layer\n";
+        std::cout << "  clearing the layer\n";
         potholes_src.source_ptr->clear_layer();
-        potholes_src.source_ptr->set_update_flag();
+        std::cout << "  setting the input cloud of the layer\n";
         potholes_src.source_ptr->set_input_cloud(potholes_src.source_cloud);
+        std::cout << "  setting the update_flag of the layer\n";
+        potholes_src.source_ptr->set_update_flag();
+        std::cout << "  updating the layer\n";
         potholes_src.source_ptr->update_layer();
 
+        std::cout << "postprocessing the layer\n";
         potholes_src.postprocessor.process_layer();
     }
 

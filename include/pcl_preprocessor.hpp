@@ -98,6 +98,7 @@ namespace pcl_preprocessor {
 
     bool PclPreProcessor::apply_box3d_filter() {
         if (this->box3d_filter) {
+            this->box3d_filter_handler.setInputCloud(this->cloud);
             this->box3d_filter_handler.filter(*(this->cloud));
             return true;
         } else {
@@ -138,6 +139,7 @@ namespace pcl_preprocessor {
     }
 
     void PclPreProcessor::set_input_cloud(pcl::PointCloud<POINT_TYPE>::Ptr input_cloud) {
+        this->cloud_given = true;
         this->cloud = input_cloud;
     }
 

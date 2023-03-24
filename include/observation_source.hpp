@@ -22,7 +22,7 @@ namespace observation_source {
             this->point_weight = 0.8;
         }
 
-        void set_input_cloud(boost::shared_ptr<pcl::PointCloud<POINT_TYPE>> input_cloud) {
+        void set_input_cloud(pcl::PointCloud<POINT_TYPE>::Ptr input_cloud) {
             this->cloud = input_cloud;
         }
 
@@ -36,9 +36,12 @@ namespace observation_source {
 
         void update_layer() {
             if (this->update_available) {
+                std::cout << "confirmed that update is available \nattempting to iterate over cloud\n";
+
+                std::cout << this->cloud << std::endl;
                 for (auto &point: *(this->cloud)) {
-                    int x_position = point.x / this->resolution;
-                    int y_position = point.y / this->resolution;
+                    // int x_position = point.x / this->resolution;
+                    // int y_position = point.y / this->resolution;
                     // std::cout << "(" << x_position << ", " << y_position << "), ";
                     grid_map::Position pose(point.x, point.y);
                     try {
