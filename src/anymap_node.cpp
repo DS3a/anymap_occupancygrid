@@ -45,15 +45,18 @@ public:
     AnyMapNode();
 private:
     // pcl source 1
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_subscription;
-    std::shared_ptr<observation_source::ObservationSource> test_source_ptr;
-    layer_postprocessor::LayerPostProcessor test_postprocessor;
-    pcl::PointCloud<POINT_TYPE>::Ptr cloud = boost::make_shared<pcl::PointCloud<POINT_TYPE>>();
-    pcl::ConditionAnd<POINT_TYPE>::Ptr z_obstacle_cond;
-    pcl::ConditionalRemoval<POINT_TYPE> spatial_obstacle_filter = pcl::ConditionalRemoval<POINT_TYPE>();
-    void pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr potholes_subscription;
+    std::shared_ptr<observation_source::ObservationSource> potholes_source_ptr;
+    layer_postprocessor::LayerPostProcessor potholes_postprocessor;
+    // pcl::PointCloud<POINT_TYPE>::Ptr potholes_cloud;// = (new pcl::PointCloud<POINT_TYPE>());
+    pcl::PointCloud<POINT_TYPE>::Ptr potholes_cloud = boost::make_shared<pcl::PointCloud<POINT_TYPE>>();// = (new pcl::PointCloud<POINT_TYPE>());
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pcl_publisher;
+
+    pcl::ConditionAnd<POINT_TYPE>::Ptr anymap_box_cond;
+    pcl::ConditionalRemoval<POINT_TYPE> anymap_box_filter = pcl::ConditionalRemoval<POINT_TYPE>();
+    void potholes_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr potholes_processed_publisher;
 
 
     rclcpp::Service<anymap_interfaces::srv::TriggerUpdate>::SharedPtr map_update_service;
@@ -89,31 +92,27 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
         ("~/trigger_update", std::bind(&AnyMapNode::update_anymap_callback, this, std::placeholders::_1, std::placeholders::_2));
 
     // subscribe to the pcl topics with individual calbacks
-    pcl_subscription = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/camera/depth/color/points", 15, std::bind(&AnyMapNode::pcl_callback, this, std::placeholders::_1)
-        ); // this is for the realsense, which will not be used
-
-        // the observation source that the above subscription will feed into
-    this->test_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
-        new observation_source::ObservationSource("pcl", this->anymap_ptr));
-    this->test_postprocessor.set_layer_name("pcl");
-    this->test_postprocessor.set_input_grid(this->anymap_ptr);
+    potholes_subscription = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+        "/camera/depth/color/points", 15, std::bind(&AnyMapNode::potholes_callback, this, std::placeholders::_1));
+    this->potholes_source_ptr = std::shared_ptr<observation_source::ObservationSource>(
+        new observation_source::ObservationSource("potholes", this->anymap_ptr));
+    this->potholes_postprocessor.set_layer_name("potholes");
+    this->potholes_postprocessor.set_input_grid(this->anymap_ptr);
+    // this->potholes_cloud = (new pcl::PointCloud<POINT_TYPE>());
 
 
-    // this is a test
-    pcl_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("filtered_points", 10);
+    potholes_processed_publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>("potholes_processed_points", 10);
 
     pcl::ConditionAnd<POINT_TYPE>::Ptr range_cond (new pcl::ConditionAnd<POINT_TYPE>());
-    z_obstacle_cond = range_cond;
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 0.80)));
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, -0.3)));
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, -4)));
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 4.0)));
-    z_obstacle_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -4.0)));
+    anymap_box_cond = range_cond;
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::LT, 1.80)));
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("z", pcl::ComparisonOps::GT, -0.3)));
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::LT, 4.5)));
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("x", pcl::ComparisonOps::GT, 0)));
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::LT, 4.0)));
+    anymap_box_cond->addComparison(pcl::FieldComparison<POINT_TYPE>::Ptr (new pcl::FieldComparison<POINT_TYPE>("y", pcl::ComparisonOps::GT, -4.0)));
 
-    spatial_obstacle_filter.setInputCloud(cloud);
-    spatial_obstacle_filter.setCondition(z_obstacle_cond);
+    anymap_box_filter.setCondition(anymap_box_cond);
 
 
     this->grid_msg_ptr = std::shared_ptr<nav_msgs::msg::OccupancyGrid>(new nav_msgs::msg::OccupancyGrid);
@@ -122,20 +121,17 @@ AnyMapNode::AnyMapNode() : Node("anymap_node") {
     timer_ = this->create_wall_timer(150ms, std::bind(&AnyMapNode::timer_callback, this));
 }
 
-void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+void AnyMapNode::potholes_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
 
     sensor_msgs::msg::PointCloud2 obstacles_msg;
-    pcl::fromROSMsg(*msg, *this->cloud);
+    pcl::fromROSMsg(*msg, *this->potholes_cloud);
 
-    // std::cout << "Initial size : " << this->cloud->points.size() << std::endl;
     pcl::PointCloud<POINT_TYPE>::Ptr cloud_filtered (new pcl::PointCloud<POINT_TYPE>());
     pcl::VoxelGrid<POINT_TYPE> sor;
-    sor.setInputCloud (cloud);
+    sor.setInputCloud (this->potholes_cloud);
     sor.setLeafSize (0.13f, 0.13f, 0.13f);
     sor.filter (*cloud_filtered);
-    this->test_source_ptr->set_point_weight(0.6);
-    // cloud_filtered = this->cloud;
-    // std::cout << "Downsampled size : " << cloud_filtered->points.size() << std::endl;
+    this->potholes_source_ptr->set_point_weight(0.6);
 
     Eigen::Affine3f transform_y = Eigen::Affine3f::Identity();
 
@@ -152,26 +148,24 @@ void AnyMapNode::pcl_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<POINT_TYPE>());
     pcl::transformPointCloud(*cloud_filtered, *transformed_cloud, transform_y);
 
-    spatial_obstacle_filter.setInputCloud(transformed_cloud);
-    spatial_obstacle_filter.filter(*transformed_cloud);
+    anymap_box_filter.setInputCloud(transformed_cloud);
+    anymap_box_filter.filter(*transformed_cloud);
 
 
     pcl::toROSMsg(*transformed_cloud, obstacles_msg);
     obstacles_msg.header.frame_id = "camera_link";
-    this->pcl_publisher->publish(obstacles_msg);
-
-    cloud = transformed_cloud;
+    this->potholes_processed_publisher->publish(obstacles_msg);
 
     // TODO test and see whetHer this works well in realtime
     this->counter++;
     if (counter == 8) {
-        this->test_source_ptr->clear_layer();
-        this->test_source_ptr->set_update_flag();
+        this->potholes_source_ptr->clear_layer();
+        this->potholes_source_ptr->set_update_flag();
         counter = 0;
-        this->test_source_ptr->set_input_cloud(transformed_cloud);
-        this->test_source_ptr->update_layer();
+        this->potholes_source_ptr->set_input_cloud(transformed_cloud);
+        this->potholes_source_ptr->update_layer();
 
-        this->test_postprocessor.process_layer();
+        this->potholes_postprocessor.process_layer();
    }
 
 }
@@ -183,9 +177,9 @@ void AnyMapNode::update_anymap_callback(const std::shared_ptr<anymap_interfaces:
 }
 
 void AnyMapNode::timer_callback() {
-    if (this->anymap_ptr->exists("pclProcessed")) {
+    if (this->anymap_ptr->exists("potholesProcessed")) {
         // std::cout << "found pcl layer publishing gridmap \n";
-        conv.toOccupancyGrid(*this->anymap_ptr.get(), "pclProcessed", 0, 1, *this->grid_msg_ptr.get());
+        conv.toOccupancyGrid(*this->anymap_ptr.get(), "potholesProcessed", 0, 1, *this->grid_msg_ptr.get());
         grid_msg_ptr->header.frame_id = "camera_link";
         this->anymap_publisher->publish(*this->grid_msg_ptr.get());
     } else {
